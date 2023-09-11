@@ -1,0 +1,926 @@
+---
+title: "M"
+author: "beyza"
+date: "2023-08-23"
+output: html_document
+---
+
+
+---
+title: "lösin"
+author: "beyza"
+date: "2023-08-02"
+output: html_document
+---
+XLERİ SİLMEK İÇİN for dosya in *.words; do                                                              
+    grep -v 'X' "$dosya" > tmpfile && mv tmpfile "$dosya"
+done
+
+
+for file in *.words; do
+    # Dosya adının uzantısını .fas olarak değiştir
+    fasta_file="${file%.words}.fas"
+
+    # Dosyayı fasta formatına çevir ve yeni dosyaya kaydet
+    awk '{ print ">"NR"\n"$0 }' "$file" > "$fasta_file"
+
+done
+ 
+ KAYDETMEK İÇİN 
+write.csv(mgw_cleaned, file = "matrix_verisi.csv", row.names = TRUE)
+ 
+ bir şey indiirirken örnek
+ BiocManager::install("AnnotationHub")
+ 
+ 
+ 
+
+MGW
+```{r}
+library(DNAshapeR)
+library(seqinr)
+library(abind)
+
+
+setwd("/Users/beyzaaygun/Desktop/Bioinformatic/Erasmus/words2")
+
+file_list <- list.files()
+
+file_list <- list.files(pattern = "\\.fas$")
+
+shape_data_list <- lapply(file_list , getShape)
+
+
+
+mgw_data_list <- lapply(shape_data_list, function(shape_data_list) {
+  shape_data_list$MGW
+})
+
+#isim değiştirmek için
+names(mgw_data_list) <- file_list
+
+#Bu işlev, verilen bir karakter vektöründe bulunan dosya uzantılarını (.fas) kaldırmak için kullanılacak.
+remove_fas_extension_mgw <- function(mgw_data_list) {
+  gsub("\\.fas$", "", mgw_data_list)
+}
+yeni_eleman_isimleri_mgw <- sapply(names(mgw_data_list), remove_fas_extension_mgw)
+mgw_data_list <- setNames(mgw_data_list, yeni_eleman_isimleri_mgw)
+
+
+########average
+# Ortalamayı NA değerleri hariç hesaplayan fonksiyon
+mean_without_na <- function(x) {
+  mean(x[!is.na(x)])
+}
+
+# Her bir elemanın içindeki verilerin ortalamasını hesaplayan fonksiyon
+calculate_means <- function(data_matrix_list) {
+  lapply(data_matrix_list, function(data_matrix) {
+    apply(data_matrix, 2, mean_without_na)
+  })
+}
+
+# Ortalama hesaplamalarını yap
+average_data_list <- calculate_means(mgw_data_list)
+
+# Ortalama verilerin isimlerini güncelle
+names(average_data_list) <- yeni_eleman_isimleri_mgw
+
+
+
+
+############### create kmer
+create_kmers_custom <- function(column, k) {
+  n <- length(column)
+  kmers <- list()
+  for (i in 1:(n - k + 1)) {
+    if (i + k - 1 <= n) {
+      kmer <- column[i:(i + k - 1)]
+      kmers <- c(kmers, list(kmer))
+    }
+  }
+  return(kmers)
+}
+
+kmer_size <- 3
+result_list_custom <- list()
+
+for (gene_name in names(average_data_list)) {
+  mgw_vector <- average_data_list[[gene_name]]  # Matris sütununu vektör olarak al
+  valid_column <- mgw_vector[!is.na(mgw_vector)] # NA olmayan değerleri al
+    
+  kmers_gene <- create_kmers_custom(valid_column, kmer_size)
+  
+  result_list_custom[[gene_name]] <- kmers_gene
+}
+
+
+
+# Normalizasyon işlemi
+custom_min_max_normalize <- function(data, min_val, max_val) {
+  normalized_data <- (data - min_val) / (max_val - min_val)
+  return(normalized_data)
+}
+
+all_data <- unlist(unlist(result_list_custom))  # Tüm veriyi tek bir vektöre dönüştür
+global_min <- min(all_data, na.rm = TRUE)
+global_max <- max(all_data, na.rm = TRUE)
+
+
+normalized_result_list <- list()
+
+for (gene_name in names(result_list_custom)) {
+  kmers_gene <- result_list_custom[[gene_name]]
+
+  normalized_kmers_gene <- lapply(kmers_gene, function(kmer) {
+    custom_min_max_normalize(kmer, global_min, global_max)
+  })
+
+  normalized_result_list[[gene_name]] <- normalized_kmers_gene
+}
+
+
+```
+
+EP
+```{r}
+
+EP_data_list <- lapply(shape_data_list, function(shape_data_list) {
+  shape_data_list$EP
+})
+
+#isim değiştirmek için
+names(EP_data_list) <- file_list
+
+#Bu işlev, verilen bir karakter vektöründe bulunan dosya uzantılarını (.fas) kaldırmak için kullanılacak.
+remove_fas_extension_EP <- function(EP_data_list) {
+  gsub("\\.fas$", "", EP_data_list)
+}
+yeni_eleman_isimleri_EP <- sapply(names(EP_data_list), remove_fas_extension_EP)
+EP_data_list <- setNames(EP_data_list, yeni_eleman_isimleri_EP)
+
+########average
+# Ortalamayı NA değerleri hariç hesaplayan fonksiyon
+mean_without_na <- function(x) {
+  mean(x[!is.na(x)])
+}
+
+# Her bir elemanın içindeki verilerin ortalamasını hesaplayan fonksiyon
+calculate_means <- function(data_matrix_list) {
+  lapply(data_matrix_list, function(data_matrix) {
+    apply(data_matrix, 2, mean_without_na)
+  })
+}
+
+# Ortalama hesaplamalarını yap
+average_data_list_EP <- calculate_means(EP_data_list)
+
+# Ortalama verilerin isimlerini güncelle
+names(average_data_list_EP) <- yeni_eleman_isimleri_EP
+
+
+
+
+############### create kmer
+create_kmers_custom <- function(column, k) {
+  n <- length(column)
+  kmers <- list()
+  for (i in 1:(n - k + 1)) {
+    if (i + k - 1 <= n) {
+      kmer <- column[i:(i + k - 1)]
+      kmers <- c(kmers, list(kmer))
+    }
+  }
+  return(kmers)
+}
+
+kmer_size <- 3
+result_list_custom_EP <- list()
+
+for (gene_name in names(average_data_list_EP)) {
+  EP_vector <- average_data_list_EP[[gene_name]]  # Matris sütununu vektör olarak al
+  valid_column_EP <- EP_vector[!is.na(EP_vector)] # NA olmayan değerleri al
+    
+  kmers_gene_EP <- create_kmers_custom(valid_column_EP, kmer_size)
+  
+  result_list_custom_EP[[gene_name]] <- kmers_gene_EP
+}
+
+
+
+# Normalizasyon işlemi
+custom_min_max_normalize <- function(data, min_val, max_val) {
+  normalized_data <- (data - min_val) / (max_val - min_val)
+  return(normalized_data)
+}
+
+all_data_EP <- unlist(unlist(result_list_custom_EP))  # Tüm veriyi tek bir vektöre dönüştür
+global_min_EP <- min(all_data_EP, na.rm = TRUE)
+global_max_EP <- max(all_data_EP, na.rm = TRUE)
+
+
+normalized_result_list_EP <- list()
+
+for (gene_name in names(result_list_custom_EP)) {
+  kmers_gene_EP <- result_list_custom_EP[[gene_name]]
+
+  normalized_kmers_gene_EP <- lapply(kmers_gene_EP, function(kmer) {
+    custom_min_max_normalize(kmer, global_min_EP, global_max_EP)
+  })
+
+  normalized_result_list_EP[[gene_name]] <- normalized_kmers_gene_EP
+}
+
+
+```
+
+HelT
+```{r}
+
+
+HelT_data_list <- lapply(shape_data_list, function(shape_data_list) {
+  shape_data_list$HelT
+})
+
+#isim değiştirmek için
+names(HelT_data_list) <- file_list
+
+#Bu işlev, verilen bir karakter vektöründe bulunan dosya uzantılarını (.fas) kaldırmak için kullanılacak.
+remove_fas_extension_HelT <- function(HelT_data_list) {
+  gsub("\\.fas$", "", HelT_data_list)
+}
+yeni_eleman_isimleri_HelT <- sapply(names(HelT_data_list), remove_fas_extension_HelT)
+HelT_data_list <- setNames(HelT_data_list, yeni_eleman_isimleri_HelT)
+
+########average
+# Ortalamayı NA değerleri hariç hesaplayan fonksiyon
+mean_without_na <- function(x) {
+  mean(x[!is.na(x)])
+}
+
+# Her bir elemanın içindeki verilerin ortalamasını hesaplayan fonksiyon
+calculate_means <- function(data_matrix_list) {
+  lapply(data_matrix_list, function(data_matrix) {
+    apply(data_matrix, 2, mean_without_na)
+  })
+}
+
+# Ortalama hesaplamalarını yap
+average_data_list_HelT <- calculate_means(HelT_data_list)
+
+# Ortalama verilerin isimlerini güncelle
+names(average_data_list_HelT) <- yeni_eleman_isimleri_HelT
+
+
+
+
+############### create kmer
+create_kmers_custom <- function(column, k) {
+  n <- length(column)
+  kmers <- list()
+  for (i in 1:(n - k + 1)) {
+    if (i + k - 1 <= n) {
+      kmer <- column[i:(i + k - 1)]
+      kmers <- c(kmers, list(kmer))
+    }
+  }
+  return(kmers)
+}
+
+kmer_size <- 4
+result_list_custom_HelT <- list()
+
+for (gene_name in names(average_data_list_HelT)) {
+  HelT_vector <- average_data_list_HelT[[gene_name]]  # Matris sütununu vektör olarak al
+  valid_column_HelT <- HelT_vector[!is.na(HelT_vector)] # NA olmayan değerleri al
+    
+  kmers_gene_HelT <- create_kmers_custom(valid_column_HelT, kmer_size)
+  
+  result_list_custom_HelT[[gene_name]] <- kmers_gene_HelT
+}
+
+
+
+# Normalizasyon işlemi
+custom_min_max_normalize <- function(data, min_val, max_val) {
+  normalized_data <- (data - min_val) / (max_val - min_val)
+  return(normalized_data)
+}
+
+all_data_HelT <- unlist(unlist(result_list_custom_HelT))  # Tüm veriyi tek bir vektöre dönüştür
+global_min_HelT <- min(all_data_HelT, na.rm = TRUE)
+global_max_HelT <- max(all_data_HelT, na.rm = TRUE)
+
+
+normalized_result_list_HelT <- list()
+
+for (gene_name in names(result_list_custom_HelT)) {
+  kmers_gene_HelT <- result_list_custom_HelT[[gene_name]]
+
+  normalized_kmers_gene_HelT <- lapply(kmers_gene_HelT, function(kmer) {
+    custom_min_max_normalize(kmer, global_min_HelT, global_max_HelT)
+  })
+
+  normalized_result_list_HelT[[gene_name]] <- normalized_kmers_gene_HelT
+}
+
+
+```
+
+Roll 
+```{r}
+
+Roll_data_list <- lapply(shape_data_list, function(shape_data_list) {
+  shape_data_list$Roll
+})
+
+#isim değiştirmek için
+names(Roll_data_list) <- file_list
+
+#Bu işlev, verilen bir karakter vektöründe bulunan dosya uzantılarını (.fas) kaldırmak için kullanılacak.
+remove_fas_extension_Roll <- function(Roll_data_list) {
+  gsub("\\.fas$", "", Roll_data_list)
+}
+yeni_eleman_isimleri_Roll <- sapply(names(Roll_data_list), remove_fas_extension_Roll)
+Roll_data_list <- setNames(Roll_data_list, yeni_eleman_isimleri_Roll)
+
+########average
+# Ortalamayı NA değerleri hariç hesaplayan fonksiyon
+mean_without_na <- function(x) {
+  mean(x[!is.na(x)])
+}
+
+# Her bir elemanın içindeki verilerin ortalamasını hesaplayan fonksiyon
+calculate_means <- function(data_matrix_list) {
+  lapply(data_matrix_list, function(data_matrix) {
+    apply(data_matrix, 2, mean_without_na)
+  })
+}
+
+# Ortalama hesaplamalarını yap
+average_data_list_Roll <- calculate_means(Roll_data_list)
+
+# Ortalama verilerin isimlerini güncelle
+names(average_data_list_Roll) <- yeni_eleman_isimleri_Roll
+
+
+
+
+############### create kmer
+create_kmers_custom <- function(column, k) {
+  n <- length(column)
+  kmers <- list()
+  for (i in 1:(n - k + 1)) {
+    if (i + k - 1 <= n) {
+      kmer <- column[i:(i + k - 1)]
+      kmers <- c(kmers, list(kmer))
+    }
+  }
+  return(kmers)
+}
+
+kmer_size <- 4
+result_list_custom_Roll <- list()
+
+for (gene_name in names(average_data_list_Roll)) {
+  Roll_vector <- average_data_list_Roll[[gene_name]]  # Matris sütununu vektör olarak al
+  valid_column_Roll <- Roll_vector[!is.na(Roll_vector)] # NA olmayan değerleri al
+    
+  kmers_gene_Roll <- create_kmers_custom(valid_column_Roll, kmer_size)
+  
+  result_list_custom_Roll[[gene_name]] <- kmers_gene_Roll
+}
+
+
+
+# Normalizasyon işlemi
+custom_min_max_normalize <- function(data, min_val, max_val) {
+  normalized_data <- (data - min_val) / (max_val - min_val)
+  return(normalized_data)
+}
+
+all_data_Roll <- unlist(unlist(result_list_custom_Roll))  # Tüm veriyi tek bir vektöre dönüştür
+global_min_Roll <- min(all_data_Roll, na.rm = TRUE)
+global_max_Roll <- max(all_data_Roll, na.rm = TRUE)
+
+
+normalized_result_list_Roll <- list()
+
+for (gene_name in names(result_list_custom_Roll)) {
+  kmers_gene_Roll <- result_list_custom_Roll[[gene_name]]
+
+  normalized_kmers_gene_Roll <- lapply(kmers_gene_Roll, function(kmer) {
+    custom_min_max_normalize(kmer, global_min_Roll, global_max_Roll)
+  })
+
+  normalized_result_list_Roll[[gene_name]] <- normalized_kmers_gene_Roll
+}
+
+```
+
+ProT
+```{r}
+ProT_data_list <- lapply(shape_data_list, function(shape_data_list) {
+  shape_data_list$ProT
+})
+
+#isim değiştirmek için
+names(ProT_data_list) <- file_list
+
+#Bu işlev, verilen bir karakter vektöründe bulunan dosya uzantılarını (.fas) kaldırmak için kullanılacak.
+remove_fas_extension_ProT <- function(ProT_data_list) {
+  gsub("\\.fas$", "", ProT_data_list)
+}
+yeni_eleman_isimleri_ProT <- sapply(names(ProT_data_list), remove_fas_extension_ProT)
+ProT_data_list <- setNames(ProT_data_list, yeni_eleman_isimleri_ProT)
+
+########average
+# Ortalamayı NA değerleri hariç hesaplayan fonksiyon
+mean_without_na <- function(x) {
+  mean(x[!is.na(x)])
+}
+
+# Her bir elemanın içindeki verilerin ortalamasını hesaplayan fonksiyon
+calculate_means <- function(data_matrix_list) {
+  lapply(data_matrix_list, function(data_matrix) {
+    apply(data_matrix, 2, mean_without_na)
+  })
+}
+
+# Ortalama hesaplamalarını yap
+average_data_list_ProT <- calculate_means(ProT_data_list)
+
+# Ortalama verilerin isimlerini güncelle
+names(average_data_list_ProT) <- yeni_eleman_isimleri_ProT
+
+
+
+
+############### create kmer
+create_kmers_custom <- function(column, k) {
+  n <- length(column)
+  kmers <- list()
+  for (i in 1:(n - k + 1)) {
+    if (i + k - 1 <= n) {
+      kmer <- column[i:(i + k - 1)]
+      kmers <- c(kmers, list(kmer))
+    }
+  }
+  return(kmers)
+}
+
+kmer_size <- 3
+result_list_custom_ProT <- list()
+
+for (gene_name in names(average_data_list_ProT)) {
+  ProT_vector <- average_data_list_ProT[[gene_name]]  # Matris sütununu vektör olarak al
+  valid_column_ProT <- ProT_vector[!is.na(ProT_vector)] # NA olmayan değerleri al
+    
+  kmers_gene_ProT <- create_kmers_custom(valid_column_ProT, kmer_size)
+  
+  result_list_custom_ProT[[gene_name]] <- kmers_gene_ProT
+}
+
+
+
+# Normalizasyon işlemi
+custom_min_max_normalize <- function(data, min_val, max_val) {
+  normalized_data <- (data - min_val) / (max_val - min_val)
+  return(normalized_data)
+}
+
+all_data_ProT <- unlist(unlist(result_list_custom_ProT))  # Tüm veriyi tek bir vektöre dönüştür
+global_min_ProT <- min(all_data_ProT, na.rm = TRUE)
+global_max_ProT <- max(all_data_ProT, na.rm = TRUE)
+
+
+normalized_result_list_ProT <- list()
+
+for (gene_name in names(result_list_custom_ProT)) {
+  kmers_gene_ProT <- result_list_custom_ProT[[gene_name]]
+
+  normalized_kmers_gene_ProT <- lapply(kmers_gene_ProT, function(kmer) {
+    custom_min_max_normalize(kmer, global_min_ProT, global_max_ProT)
+  })
+
+  normalized_result_list_ProT[[gene_name]] <- normalized_kmers_gene_ProT
+}
+```
+
+integration
+```{r}
+matrix_list <- list(normalized_result_list, normalized_result_list_EP, normalized_result_list_HelT, normalized_result_list_ProT, normalized_result_list_Roll)
+names(matrix_list) <- c("MGW", "EP", "HelT", "ProT", "Roll")
+
+a <- as.matrix(matrix_list)
+####bu kadarı yeterli olabilir
+
+MGW_degerler <- unlist(matrix_list$MGW)
+EP_degerler <- unlist(matrix_list$EP)
+
+# TF faktör isimlerini çıkarma
+TF_isimler <- names(matrix_list$MGW)
+
+# Matrisi oluşturma
+matris <- matrix(nrow = length(TF_isimler), ncol = length(MGW_degerler) + length(EP_degerler))
+rownames(matris) <- TF_isimler
+colnames(matris) <- c("MGW", "EP")
+
+# Matrisi doldurma
+for (i in 1:length(TF_isimler)) {
+  matris[i, "MGW"] <- MGW_degerler[i]
+  matris[i, "EP"] <- EP_degerler[i]
+}
+
+
+```
+
+
+
+
+
+eucieedian distabce for 1 diemansioanl
+```{r}
+library(ggplot2)
+library(factoextra)
+
+
+##########################for mgw
+data_matrix_mgw <- matrix(unlist(normalized_result_list), ncol = 3, byrow = TRUE)
+
+# İsimlerin düzenlenmesi
+result <- character()
+seen_elements <- character()
+
+for (index in seq_along(names(normalized_result_list))) {
+  element <- names(normalized_result_list)[index]
+  sub_elements <- normalized_result_list[[element]]
+  
+  # İlgili elemanın tekrar sayısı
+  repeat_count <- length(sub_elements)
+  
+  # Alfabe sırasına göre eklemek için alfabe vektörü
+  alphabet <- letters
+  
+  for (sub_index in seq_along(sub_elements)) {
+    repeated_element <- paste0(element, "_", alphabet[sub_index])
+    
+    # Eğer aynı element daha önce eklenmediyse, eklenir
+    if (!(repeated_element %in% seen_elements)) {
+      result <- c(result, repeated_element)
+      seen_elements <- c(seen_elements, repeated_element)
+    }
+  }
+}
+
+rownames(data_matrix_mgw) <- result
+colnames(data_matrix_mgw) <- c("MGW1", "MGW2", "MGW3")
+##################################for ep
+
+data_matrix_ep <- matrix(unlist(normalized_result_list_EP), ncol = 3, byrow = TRUE)
+# İsimlerin düzenlenmesi
+result <- character()
+seen_elements <- character()
+
+for (index in seq_along(names(normalized_result_list_EP))) {
+  element <- names(normalized_result_list_EP)[index]
+  sub_elements <- normalized_result_list_EP[[element]]
+  
+  # İlgili elemanın tekrar sayısı
+  repeat_count <- length(sub_elements)
+  
+  # Alfabe sırasına göre eklemek için alfabe vektörü
+  alphabet <- letters
+  
+  for (sub_index in seq_along(sub_elements)) {
+    repeated_element <- paste0(element, "_", alphabet[sub_index])
+    
+    # Eğer aynı element daha önce eklenmediyse, eklenir
+    if (!(repeated_element %in% seen_elements)) {
+      result <- c(result, repeated_element)
+      seen_elements <- c(seen_elements, repeated_element)
+    }
+  }
+}
+
+rownames(data_matrix_ep) <- result
+colnames(data_matrix_ep) <- c("EP1", "EP2", "EP3")
+
+#################################for HelT
+data_matrix_HelT <- matrix(unlist(normalized_result_list_HelT), ncol = 4, byrow = TRUE)
+# İsimlerin düzenlenmesi
+result <- character()
+seen_elements <- character()
+
+for (index in seq_along(names(normalized_result_list_HelT))) {
+  element <- names(normalized_result_list_HelT)[index]
+  sub_elements <- normalized_result_list_HelT[[element]]
+  
+  # İlgili elemanın tekrar sayısı
+  repeat_count <- length(sub_elements)
+  
+  # Alfabe sırasına göre eklemek için alfabe vektörü
+  alphabet <- letters
+  
+  for (sub_index in seq_along(sub_elements)) {
+    repeated_element <- paste0(element, "_", alphabet[sub_index])
+    
+    # Eğer aynı element daha önce eklenmediyse, eklenir
+    if (!(repeated_element %in% seen_elements)) {
+      result <- c(result, repeated_element)
+      seen_elements <- c(seen_elements, repeated_element)
+    }
+  }
+}
+
+rownames(data_matrix_HelT) <- result
+colnames(data_matrix_HelT) <- c("HelT1", "HelT2", "HelT3", "HelT4")
+
+#################################for ProT
+data_matrix_ProT <- matrix(unlist(normalized_result_list_ProT), ncol = 3, byrow = TRUE)
+# İsimlerin düzenlenmesi
+result <- character()
+seen_elements <- character()
+
+for (index in seq_along(names(normalized_result_list_ProT))) {
+  element <- names(normalized_result_list_ProT)[index]
+  sub_elements <- normalized_result_list_ProT[[element]]
+  
+  # İlgili elemanın tekrar sayısı
+  repeat_count <- length(sub_elements)
+  
+  # Alfabe sırasına göre eklemek için alfabe vektörü
+  alphabet <- letters
+  
+  for (sub_index in seq_along(sub_elements)) {
+    repeated_element <- paste0(element, "_", alphabet[sub_index])
+    
+    # Eğer aynı element daha önce eklenmediyse, eklenir
+    if (!(repeated_element %in% seen_elements)) {
+      result <- c(result, repeated_element)
+      seen_elements <- c(seen_elements, repeated_element)
+    }
+  }
+}
+
+rownames(data_matrix_ProT) <- result
+colnames(data_matrix_ProT) <- c("ProT1", "ProT2", "ProT3")
+
+######################################Roll
+
+data_matrix_Roll <- matrix(unlist(normalized_result_list_Roll), ncol = 4, byrow = TRUE)
+# İsimlerin düzenlenmesi
+result <- character()
+seen_elements <- character()
+
+for (index in seq_along(names(normalized_result_list_Roll))) {
+  element <- names(normalized_result_list_Roll)[index]
+  sub_elements <- normalized_result_list_Roll[[element]]
+  
+  # İlgili elemanın tekrar sayısı
+  repeat_count <- length(sub_elements)
+  
+  # Alfabe sırasına göre eklemek için alfabe vektörü
+  alphabet <- letters
+  
+  for (sub_index in seq_along(sub_elements)) {
+    repeated_element <- paste0(element, "_", alphabet[sub_index])
+    
+    # Eğer aynı element daha önce eklenmediyse, eklenir
+    if (!(repeated_element %in% seen_elements)) {
+      result <- c(result, repeated_element)
+      seen_elements <- c(seen_elements, repeated_element)
+    }
+  }
+}
+
+rownames(data_matrix_Roll) <- result
+colnames(data_matrix_Roll) <- c("Roll1", "Roll2", "Roll3", "Roll4")
+
+
+################################integration
+integrate_data <- merge(data_matrix_mgw, data_matrix_ep,data_matrix_ProT,  by = "row.names", all = TRUE)
+integrate_data2 <- cbind(integrate_data,data_matrix_ProT)
+
+rownames(integrate_data2) <- integrate_data2$Row.names
+
+integrate_data2$Row.names <- NULL
+
+
+
+res.dist <-dist(integrate_data2, method = "euclidean")
+
+
+fviz_dist(res.dist, order = FALSE, show_labels = TRUE,
+  lab_size = NULL, gradient = list(low = "red", mid = "white", high =
+  "blue"))
+
+a <- as.matrix(res.dist)
+write.csv(a, file = "mgw_ep_prot.csv", row.names = TRUE)
+
+
+```
+
+
+
+
+deneme kmeans
+```{r}
+library(tidyverse)  # data manipulation
+library(cluster)    # clustering algorithms
+library(factoextra)
+
+k2 <- kmeans(res.dist, centers = 10, nstart = 2000)
+fviz_cluster(k2, data = res.dist)
+```
+
+100 tanesi için
+```{r}
+first_100_elements <- normalized_result_list[1:100]
+first_100_elements_ep <- normalized_result_list_EP[1:100]
+first_100_elements_ProT <- normalized_result_list_ProT[1:100]
+first_100_elements_HelT <- normalized_result_list_HelT[1:100]
+first_100_elements_Roll <- normalized_result_list_Roll[1:100]
+
+library(ggplot2)
+library(factoextra)
+
+data_matrix_mgw <- matrix(unlist(first_100_elements), ncol = 3, byrow = TRUE)
+
+# İsimlerin düzenlenmesi
+result <- character()
+seen_elements <- character()
+
+for (index in seq_along(names(first_100_elements))) {
+  element <- names(first_100_elements)[index]
+  sub_elements <- first_100_elements[[element]]
+  
+  # İlgili elemanın tekrar sayısı
+  repeat_count <- length(sub_elements)
+  
+  # Alfabe sırasına göre eklemek için alfabe vektörü
+  alphabet <- letters
+  
+  for (sub_index in seq_along(sub_elements)) {
+    repeated_element <- paste0(element, "_", alphabet[sub_index])
+    
+    # Eğer aynı element daha önce eklenmediyse, eklenir
+    if (!(repeated_element %in% seen_elements)) {
+      result <- c(result, repeated_element)
+      seen_elements <- c(seen_elements, repeated_element)
+    }
+  }
+}
+
+rownames(data_matrix_mgw) <- result
+colnames(data_matrix_mgw) <- c("MGW1", "MGW2", "MGW3")
+##############for ep
+
+data_matrix_ep <- matrix(unlist(first_100_elements_ep), ncol = 3, byrow = TRUE)
+# İsimlerin düzenlenmesi
+result <- character()
+seen_elements <- character()
+
+for (index in seq_along(names(first_100_elements_ep))) {
+  element <- names(first_100_elements_ep)[index]
+  sub_elements <- first_100_elements_ep[[element]]
+  
+  # İlgili elemanın tekrar sayısı
+  repeat_count <- length(sub_elements)
+  
+  # Alfabe sırasına göre eklemek için alfabe vektörü
+  alphabet <- letters
+  
+  for (sub_index in seq_along(sub_elements)) {
+    repeated_element <- paste0(element, "_", alphabet[sub_index])
+    
+    # Eğer aynı element daha önce eklenmediyse, eklenir
+    if (!(repeated_element %in% seen_elements)) {
+      result <- c(result, repeated_element)
+      seen_elements <- c(seen_elements, repeated_element)
+    }
+  }
+}
+
+rownames(data_matrix_ep) <- result
+colnames(data_matrix_ep) <- c("EP1", "EP2", "EP3")
+
+##############for ProT
+
+data_matrix_ProT <- matrix(unlist(first_100_elements_ProT), ncol = 3, byrow = TRUE)
+# İsimlerin düzenlenmesi
+result <- character()
+seen_elements <- character()
+
+for (index in seq_along(names(first_100_elements_ProT))) {
+  element <- names(first_100_elements_ProT)[index]
+  sub_elements <- first_100_elements_ProT[[element]]
+  
+  # İlgili elemanın tekrar sayısı
+  repeat_count <- length(sub_elements)
+  
+  # Alfabe sırasına göre eklemek için alfabe vektörü
+  alphabet <- letters
+  
+  for (sub_index in seq_along(sub_elements)) {
+    repeated_element <- paste0(element, "_", alphabet[sub_index])
+    
+    # Eğer aynı element daha önce eklenmediyse, eklenir
+    if (!(repeated_element %in% seen_elements)) {
+      result <- c(result, repeated_element)
+      seen_elements <- c(seen_elements, repeated_element)
+    }
+  }
+}
+
+rownames(data_matrix_ProT) <- result
+colnames(data_matrix_ProT) <- c("ProT1", "ProT2", "ProT3")
+
+############## HelT
+data_matrix_HelT <- matrix(unlist(first_100_elements_HelT), ncol = 4, byrow = TRUE)
+# İsimlerin düzenlenmesi
+result <- character()
+seen_elements <- character()
+
+for (index in seq_along(names(first_100_elements_HelT))) {
+  element <- names(first_100_elements_HelT)[index]
+  sub_elements <- first_100_elements_HelT[[element]]
+  
+  # İlgili elemanın tekrar sayısı
+  repeat_count <- length(sub_elements)
+  
+  # Alfabe sırasına göre eklemek için alfabe vektörü
+  alphabet <- letters
+  
+  for (sub_index in seq_along(sub_elements)) {
+    repeated_element <- paste0(element, "_", alphabet[sub_index])
+    
+    # Eğer aynı element daha önce eklenmediyse, eklenir
+    if (!(repeated_element %in% seen_elements)) {
+      result <- c(result, repeated_element)
+      seen_elements <- c(seen_elements, repeated_element)
+    }
+  }
+}
+
+rownames(data_matrix_HelT) <- result
+colnames(data_matrix_HelT) <- c("HelT1", "HelT2", "HelT3", "HelT4")
+
+############## Roll
+data_matrix_Roll <- matrix(unlist(first_100_elements_Roll), ncol = 4, byrow = TRUE)
+# İsimlerin düzenlenmesi
+result <- character()
+seen_elements <- character()
+
+for (index in seq_along(names(first_100_elements_Roll))) {
+  element <- names(first_100_elements_Roll)[index]
+  sub_elements <- first_100_elements_Roll[[element]]
+  
+  # İlgili elemanın tekrar sayısı
+  repeat_count <- length(sub_elements)
+  
+  # Alfabe sırasına göre eklemek için alfabe vektörü
+  alphabet <- letters
+  
+  for (sub_index in seq_along(sub_elements)) {
+    repeated_element <- paste0(element, "_", alphabet[sub_index])
+    
+    # Eğer aynı element daha önce eklenmediyse, eklenir
+    if (!(repeated_element %in% seen_elements)) {
+      result <- c(result, repeated_element)
+      seen_elements <- c(seen_elements, repeated_element)
+    }
+  }
+}
+
+rownames(data_matrix_Roll) <- result
+colnames(data_matrix_Roll) <- c("Roll1", "Roll2", "Roll3", "Roll4")
+
+
+
+integrate_data <- merge(data_matrix_mgw, data_matrix_ep,by = "row.names", all = TRUE)
+integrate_data2 <- cbind(integrate_data,data_matrix_ProT)
+integrate_data3 <- cbind(integrate_data2,data_matrix_HelT)
+integrate_data4 <- cbind(integrate_data3,data_matrix_Roll)
+
+
+rownames(integrate_data4) <- integrate_data4$Row.names
+integrate_data4$Row.names <- NULL
+
+
+
+
+res.dist <-dist(integrate_data4, method = "euclidean")
+
+
+fviz_dist(res.dist, order = FALSE, show_labels = TRUE,
+  lab_size = NULL, gradient = list(low = "red", mid = "white", high =
+  "blue"))
+
+a <- as.matrix(res.dist)
+write.csv(a, file = "for5p.csv", row.names = TRUE)
+
+
+```
+
+
