@@ -1,4 +1,5 @@
 
+
 libarries
 ```{r}
 library(DNAshapeR)
@@ -7,603 +8,132 @@ library(abind)
 ```
 
  
-use setwd
-MGW
-```{r}
  
-
+```{r}
 file_list <- list.files()
-
 file_list <- list.files(pattern = "\\.fas$")
 
 shape_data_list <- lapply(file_list , getShape)
 
-
-
-mgw_data_list <- lapply(shape_data_list, function(shape_data_list) {
-  shape_data_list$MGW
-})
-
-#FOR CHANCİNG NAME
-names(mgw_data_list) <- file_list
-
-#This function will be used to remove file extensions (.fas) present in a given character vector.
-remove_fas_extension_mgw <- function(mgw_data_list) {
-  gsub("\\.fas$", "", mgw_data_list)
-}
-yeni_eleman_isimleri_mgw <- sapply(names(mgw_data_list), remove_fas_extension_mgw)
-mgw_data_list <- setNames(mgw_data_list, yeni_eleman_isimleri_mgw)
-
-
-######## FOR average
-# Function that calculates the average excluding NA values
-mean_without_na <- function(x) {
-  mean(x[!is.na(x)])
-}
-
-# Function that calculates the average of the data within each element
-calculate_means <- function(data_matrix_list) {
-  lapply(data_matrix_list, function(data_matrix) {
-    apply(data_matrix, 2, mean_without_na)
-  })
-}
-
-# Perform average calculations
-average_data_list <- calculate_means(mgw_data_list)
-
-# Update names of average data
-names(average_data_list) <- yeni_eleman_isimleri_mgw
-
-
-
-
-############### create kmer
-create_kmers_custom <- function(column, k) {
-  n <- length(column)
-  kmers <- list()
-  for (i in 1:(n - k + 1)) {
-    if (i + k - 1 <= n) {
-      kmer <- column[i:(i + k - 1)]
-      kmers <- c(kmers, list(kmer))
-    }
-  }
-  return(kmers)
-}
-
-kmer_size <- 3
-result_list_custom <- list()
-
-for (gene_name in names(average_data_list)) {
-  mgw_vector <- average_data_list[[gene_name]]  
-  valid_column <- mgw_vector[!is.na(mgw_vector)]
-    
-  kmers_gene <- create_kmers_custom(valid_column, kmer_size)
-  
-  result_list_custom[[gene_name]] <- kmers_gene
-}
-
-
-
-# Normalizasyon 
-custom_min_max_normalize <- function(data, min_val, max_val) {
-  normalized_data <- (data - min_val) / (max_val - min_val)
-  return(normalized_data)
-}
-
-all_data <- unlist(unlist(result_list_custom))  # Convert all data into a single vector
-global_min <- min(all_data, na.rm = TRUE)
-global_max <- max(all_data, na.rm = TRUE)
-
-
-normalized_result_list <- list()
-
-for (gene_name in names(result_list_custom)) {
-  kmers_gene <- result_list_custom[[gene_name]]
-
-  normalized_kmers_gene <- lapply(kmers_gene, function(kmer) {
-    custom_min_max_normalize(kmer, global_min, global_max)
-  })
-
-  normalized_result_list[[gene_name]] <- normalized_kmers_gene
-}
-
-
 ```
 
-EP
+DNAShhapeR
 ```{r}
-
-EP_data_list <- lapply(shape_data_list, function(shape_data_list) {
-  shape_data_list$EP
-})
-
-names(EP_data_list) <- file_list
-
-remove_fas_extension_EP <- function(EP_data_list) {
-  gsub("\\.fas$", "", EP_data_list)
-}
-yeni_eleman_isimleri_EP <- sapply(names(EP_data_list), remove_fas_extension_EP)
-EP_data_list <- setNames(EP_data_list, yeni_eleman_isimleri_EP)
-
-########average
-
-mean_without_na <- function(x) {
-  mean(x[!is.na(x)])
-}
-
-
-calculate_means <- function(data_matrix_list) {
-  lapply(data_matrix_list, function(data_matrix) {
-    apply(data_matrix, 2, mean_without_na)
+process_column_data <- function(column_name, kmer_size) {
+  # Extract data for a specific column
+  column_data_list <- lapply(shape_data_list, function(shape_data_list) {
+    shape_data_list[[column_name]]
   })
-}
 
-average_data_list_EP <- calculate_means(EP_data_list)
+  # Set names and remove file extensions
+  names(column_data_list) <- file_list
+  column_data_list <- setNames(column_data_list, sapply(names(column_data_list), remove_fas_extension_mgw))
 
-names(average_data_list_EP) <- yeni_eleman_isimleri_EP
+  # Calculate average data
+  average_data_list <- calculate_means(column_data_list)
+  names(average_data_list) <- sapply(names(average_data_list), remove_fas_extension_mgw)
 
-
-
-
-############### create kmer
-create_kmers_custom <- function(column, k) {
-  n <- length(column)
-  kmers <- list()
-  for (i in 1:(n - k + 1)) {
-    if (i + k - 1 <= n) {
-      kmer <- column[i:(i + k - 1)]
-      kmers <- c(kmers, list(kmer))
-    }
+  # Create kmers
+  result_list_custom <- list()
+  for (gene_name in names(average_data_list)) {
+    col_vector <- average_data_list[[gene_name]]
+    valid_column <- col_vector[!is.na(col_vector)]
+    kmers_gene <- create_kmers_custom(valid_column, kmer_size)
+    result_list_custom[[gene_name]] <- kmers_gene
   }
-  return(kmers)
-}
 
-kmer_size <- 3
-result_list_custom_EP <- list()
+  # Normalize data
+  all_data <- unlist(unlist(result_list_custom))
+  global_min <- min(all_data, na.rm = TRUE)
+  global_max <- max(all_data, na.rm = TRUE)
 
-for (gene_name in names(average_data_list_EP)) {
-  EP_vector <- average_data_list_EP[[gene_name]]  
-  valid_column_EP <- EP_vector[!is.na(EP_vector)] 
-    
-  kmers_gene_EP <- create_kmers_custom(valid_column_EP, kmer_size)
-  
-  result_list_custom_EP[[gene_name]] <- kmers_gene_EP
-}
-
-
-
-# Normalization
-custom_min_max_normalize <- function(data, min_val, max_val) {
-  normalized_data <- (data - min_val) / (max_val - min_val)
-  return(normalized_data)
-}
-
-all_data_EP <- unlist(unlist(result_list_custom_EP))
-global_min_EP <- min(all_data_EP, na.rm = TRUE)
-global_max_EP <- max(all_data_EP, na.rm = TRUE)
-
-
-normalized_result_list_EP <- list()
-
-for (gene_name in names(result_list_custom_EP)) {
-  kmers_gene_EP <- result_list_custom_EP[[gene_name]]
-
-  normalized_kmers_gene_EP <- lapply(kmers_gene_EP, function(kmer) {
-    custom_min_max_normalize(kmer, global_min_EP, global_max_EP)
-  })
-
-  normalized_result_list_EP[[gene_name]] <- normalized_kmers_gene_EP
-}
-
-
-```
-
-HelT
-```{r}
-
-
-HelT_data_list <- lapply(shape_data_list, function(shape_data_list) {
-  shape_data_list$HelT
-})
-
-names(HelT_data_list) <- file_list
-
-remove_fas_extension_HelT <- function(HelT_data_list) {
-  gsub("\\.fas$", "", HelT_data_list)
-}
-yeni_eleman_isimleri_HelT <- sapply(names(HelT_data_list), remove_fas_extension_HelT)
-HelT_data_list <- setNames(HelT_data_list, yeni_eleman_isimleri_HelT)
-
-########average
-mean_without_na <- function(x) {
-  mean(x[!is.na(x)])
-}
-
-calculate_means <- function(data_matrix_list) {
-  lapply(data_matrix_list, function(data_matrix) {
-    apply(data_matrix, 2, mean_without_na)
-  })
-}
-
-average_data_list_HelT <- calculate_means(HelT_data_list)
-
-names(average_data_list_HelT) <- yeni_eleman_isimleri_HelT
-
-
-############### create kmer
-create_kmers_custom <- function(column, k) {
-  n <- length(column)
-  kmers <- list()
-  for (i in 1:(n - k + 1)) {
-    if (i + k - 1 <= n) {
-      kmer <- column[i:(i + k - 1)]
-      kmers <- c(kmers, list(kmer))
-    }
+  normalized_result_list <- list()
+  for (gene_name in names(result_list_custom)) {
+    kmers_gene <- result_list_custom[[gene_name]]
+    normalized_kmers_gene <- lapply(kmers_gene, function(kmer) {
+      custom_min_max_normalize(kmer, global_min, global_max)
+    })
+    normalized_result_list[[gene_name]] <- normalized_kmers_gene
   }
-  return(kmers)
+
+  return(normalized_result_list)
 }
 
-kmer_size <- 4
-result_list_custom_HelT <- list()
+# Define parameters
+kmer_size_mgw <- 3
+kmer_size_ep <- 3
+kmer_size_helt <- 4
+kmer_size_roll <- 4
+kmer_size_prot <- 3
 
-for (gene_name in names(average_data_list_HelT)) {
-  HelT_vector <- average_data_list_HelT[[gene_name]] 
-  valid_column_HelT <- HelT_vector[!is.na(HelT_vector)] 
-    
-  kmers_gene_HelT <- create_kmers_custom(valid_column_HelT, kmer_size)
-  
-  result_list_custom_HelT[[gene_name]] <- kmers_gene_HelT
-}
+# Process MGW data
+normalized_result_list_mgw_chat <- process_column_data("MGW", kmer_size_mgw)
 
+# Process EP data
+normalized_result_list_ep <- process_column_data("EP", kmer_size_ep)
 
+# Process HelT data
+normalized_result_list_helt_chat <- process_column_data("HelT", kmer_size_helt)
 
-# Normalization
-custom_min_max_normalize <- function(data, min_val, max_val) {
-  normalized_data <- (data - min_val) / (max_val - min_val)
-  return(normalized_data)
-}
+# Process Roll data
+normalized_result_list_roll <- process_column_data("Roll", kmer_size_roll)
 
-all_data_HelT <- unlist(unlist(result_list_custom_HelT))  
-global_min_HelT <- min(all_data_HelT, na.rm = TRUE)
-global_max_HelT <- max(all_data_HelT, na.rm = TRUE)
-
-
-normalized_result_list_HelT <- list()
-
-for (gene_name in names(result_list_custom_HelT)) {
-  kmers_gene_HelT <- result_list_custom_HelT[[gene_name]]
-
-  normalized_kmers_gene_HelT <- lapply(kmers_gene_HelT, function(kmer) {
-    custom_min_max_normalize(kmer, global_min_HelT, global_max_HelT)
-  })
-
-  normalized_result_list_HelT[[gene_name]] <- normalized_kmers_gene_HelT
-}
-
+# Process ProT data
+normalized_result_list_prot_chat <- process_column_data("ProT", kmer_size_prot)
 
 ```
-
-Roll 
-```{r}
-
-Roll_data_list <- lapply(shape_data_list, function(shape_data_list) {
-  shape_data_list$Roll
-})
-
-names(Roll_data_list) <- file_list
-
-remove_fas_extension_Roll <- function(Roll_data_list) {
-  gsub("\\.fas$", "", Roll_data_list)
-}
-yeni_eleman_isimleri_Roll <- sapply(names(Roll_data_list), remove_fas_extension_Roll)
-Roll_data_list <- setNames(Roll_data_list, yeni_eleman_isimleri_Roll)
-
-########average
-mean_without_na <- function(x) {
-  mean(x[!is.na(x)])
-}
-
-calculate_means <- function(data_matrix_list) {
-  lapply(data_matrix_list, function(data_matrix) {
-    apply(data_matrix, 2, mean_without_na)
-  })
-}
-
-average_data_list_Roll <- calculate_means(Roll_data_list)
-
-names(average_data_list_Roll) <- yeni_eleman_isimleri_Roll
-
-
-############### create kmer
-create_kmers_custom <- function(column, k) {
-  n <- length(column)
-  kmers <- list()
-  for (i in 1:(n - k + 1)) {
-    if (i + k - 1 <= n) {
-      kmer <- column[i:(i + k - 1)]
-      kmers <- c(kmers, list(kmer))
-    }
-  }
-  return(kmers)
-}
-
-kmer_size <- 4
-result_list_custom_Roll <- list()
-
-for (gene_name in names(average_data_list_Roll)) {
-  Roll_vector <- average_data_list_Roll[[gene_name]]  
-  valid_column_Roll <- Roll_vector[!is.na(Roll_vector)]
-    
-  kmers_gene_Roll <- create_kmers_custom(valid_column_Roll, kmer_size)
-  
-  result_list_custom_Roll[[gene_name]] <- kmers_gene_Roll
-}
-
-
-custom_min_max_normalize <- function(data, min_val, max_val) {
-  normalized_data <- (data - min_val) / (max_val - min_val)
-  return(normalized_data)
-}
-
-all_data_Roll <- unlist(unlist(result_list_custom_Roll)) 
-global_min_Roll <- min(all_data_Roll, na.rm = TRUE)
-global_max_Roll <- max(all_data_Roll, na.rm = TRUE)
-
-
-normalized_result_list_Roll <- list()
-
-for (gene_name in names(result_list_custom_Roll)) {
-  kmers_gene_Roll <- result_list_custom_Roll[[gene_name]]
-
-  normalized_kmers_gene_Roll <- lapply(kmers_gene_Roll, function(kmer) {
-    custom_min_max_normalize(kmer, global_min_Roll, global_max_Roll)
-  })
-
-  normalized_result_list_Roll[[gene_name]] <- normalized_kmers_gene_Roll
-}
-
-```
-
-ProT
-```{r}
-ProT_data_list <- lapply(shape_data_list, function(shape_data_list) {
-  shape_data_list$ProT
-})
-
-names(ProT_data_list) <- file_list
-
-remove_fas_extension_ProT <- function(ProT_data_list) {
-  gsub("\\.fas$", "", ProT_data_list)
-}
-yeni_eleman_isimleri_ProT <- sapply(names(ProT_data_list), remove_fas_extension_ProT)
-ProT_data_list <- setNames(ProT_data_list, yeni_eleman_isimleri_ProT)
-
-########average
-mean_without_na <- function(x) {
-  mean(x[!is.na(x)])
-}
-
-calculate_means <- function(data_matrix_list) {
-  lapply(data_matrix_list, function(data_matrix) {
-    apply(data_matrix, 2, mean_without_na)
-  })
-}
-
-average_data_list_ProT <- calculate_means(ProT_data_list)
-
-names(average_data_list_ProT) <- yeni_eleman_isimleri_ProT
-
-
-############### create kmer
-create_kmers_custom <- function(column, k) {
-  n <- length(column)
-  kmers <- list()
-  for (i in 1:(n - k + 1)) {
-    if (i + k - 1 <= n) {
-      kmer <- column[i:(i + k - 1)]
-      kmers <- c(kmers, list(kmer))
-    }
-  }
-  return(kmers)
-}
-
-kmer_size <- 3
-result_list_custom_ProT <- list()
-
-for (gene_name in names(average_data_list_ProT)) {
-  ProT_vector <- average_data_list_ProT[[gene_name]]
-  valid_column_ProT <- ProT_vector[!is.na(ProT_vector)] 
-    
-  kmers_gene_ProT <- create_kmers_custom(valid_column_ProT, kmer_size)
-  
-  result_list_custom_ProT[[gene_name]] <- kmers_gene_ProT
-}
-
-custom_min_max_normalize <- function(data, min_val, max_val) {
-  normalized_data <- (data - min_val) / (max_val - min_val)
-  return(normalized_data)
-}
-
-all_data_ProT <- unlist(unlist(result_list_custom_ProT)) 
-global_min_ProT <- min(all_data_ProT, na.rm = TRUE)
-global_max_ProT <- max(all_data_ProT, na.rm = TRUE)
-
-
-normalized_result_list_ProT <- list()
-
-for (gene_name in names(result_list_custom_ProT)) {
-  kmers_gene_ProT <- result_list_custom_ProT[[gene_name]]
-
-  normalized_kmers_gene_ProT <- lapply(kmers_gene_ProT, function(kmer) {
-    custom_min_max_normalize(kmer, global_min_ProT, global_max_ProT)
-  })
-
-  normalized_result_list_ProT[[gene_name]] <- normalized_kmers_gene_ProT
-}
-```
-
-integration
-```{r}
-matrix_list <- list(normalized_result_list, normalized_result_list_EP, normalized_result_list_HelT, normalized_result_list_ProT, normalized_result_list_Roll)
-names(matrix_list) <- c("MGW", "EP", "HelT", "ProT", "Roll")
-
-a <- as.matrix(matrix_list)
-
-
-```
-
-
-
-
 
 eucieedian distabce for 1 diemansioanl
 ```{r}
-library(ggplot2)
-library(factoextra)
+process_and_create_matrix <- function(normalized_result_list, col_names, ncol) {
+  data_matrix <- matrix(unlist(normalized_result_list), ncol = ncol, byrow = TRUE)
 
+  result <- character()
+  seen_elements <- character()
 
-##########################for mgw
-data_matrix_mgw <- matrix(unlist(normalized_result_list), ncol = 3, byrow = TRUE)
+  for (index in seq_along(names(normalized_result_list))) {
+    element <- names(normalized_result_list)[index]
+    sub_elements <- normalized_result_list[[element]]
 
-# Editing the names
-result <- character()
-seen_elements <- character()
+    repeat_count <- length(sub_elements)
 
-for (index in seq_along(names(normalized_result_list))) {
-  element <- names(normalized_result_list)[index]
-  sub_elements <- normalized_result_list[[element]]
-  
-  # Number of repetitions of the relevant element
-  repeat_count <- length(sub_elements)
-  
-  # alphabet vector to add in alphabetical order
-  alphabet <- letters
-  
-  for (sub_index in seq_along(sub_elements)) {
-    repeated_element <- paste0(element, "_", alphabet[sub_index])
-    
-    # If the same element has not been added before, it will be added
-    if (!(repeated_element %in% seen_elements)) {
-      result <- c(result, repeated_element)
-      seen_elements <- c(seen_elements, repeated_element)
+    alphabet <- letters
+
+    for (sub_index in seq_along(sub_elements)) {
+      repeated_element <- paste0(element, "_", alphabet[sub_index])
+
+      if (!(repeated_element %in% seen_elements)) {
+        result <- c(result, repeated_element)
+        seen_elements <- c(seen_elements, repeated_element)
+      }
     }
   }
+
+  rownames(data_matrix) <- result
+  colnames(data_matrix) <- col_names
+
+  return(data_matrix)
 }
 
-rownames(data_matrix_mgw) <- result
-colnames(data_matrix_mgw) <- c("MGW1", "MGW2", "MGW3")
-##################################for ep
+# Process MGW data
+data_matrix_mgw <- process_and_create_matrix(normalized_result_list, c("MGW1", "MGW2", "MGW3"), 3)
 
-data_matrix_ep <- matrix(unlist(normalized_result_list_EP), ncol = 3, byrow = TRUE)
-result <- character()
-seen_elements <- character()
+# Process EP data
+data_matrix_ep <- process_and_create_matrix(normalized_result_list_EP, c("EP1", "EP2", "EP3"), 3)
 
-for (index in seq_along(names(normalized_result_list_EP))) {
-  element <- names(normalized_result_list_EP)[index]
-  sub_elements <- normalized_result_list_EP[[element]]
+# Process HelT data
+data_matrix_HelT <- process_and_create_matrix(normalized_result_list_HelT, c("HelT1", "HelT2", "HelT3", "HelT4"), 4)
 
-  repeat_count <- length(sub_elements)
+# Process ProT data
+data_matrix_ProT <- process_and_create_matrix(normalized_result_list_ProT, c("ProT1", "ProT2", "ProT3"), 3)
 
-  alphabet <- letters
-  
-  for (sub_index in seq_along(sub_elements)) {
-    repeated_element <- paste0(element, "_", alphabet[sub_index])
+# Process Roll data
+data_matrix_Roll <- process_and_create_matrix(normalized_result_list_Roll, c("Roll1", "Roll2", "Roll3", "Roll4"), 4)
 
-    if (!(repeated_element %in% seen_elements)) {
-      result <- c(result, repeated_element)
-      seen_elements <- c(seen_elements, repeated_element)
-    }
-  }
-}
+```
 
-rownames(data_matrix_ep) <- result
-colnames(data_matrix_ep) <- c("EP1", "EP2", "EP3")
-
-#################################for HelT
-data_matrix_HelT <- matrix(unlist(normalized_result_list_HelT), ncol = 4, byrow = TRUE)
-
-result <- character()
-seen_elements <- character()
-
-for (index in seq_along(names(normalized_result_list_HelT))) {
-  element <- names(normalized_result_list_HelT)[index]
-  sub_elements <- normalized_result_list_HelT[[element]]
-
-  repeat_count <- length(sub_elements)
-
-  alphabet <- letters
-  
-  for (sub_index in seq_along(sub_elements)) {
-    repeated_element <- paste0(element, "_", alphabet[sub_index])
-
-    if (!(repeated_element %in% seen_elements)) {
-      result <- c(result, repeated_element)
-      seen_elements <- c(seen_elements, repeated_element)
-    }
-  }
-}
-
-rownames(data_matrix_HelT) <- result
-colnames(data_matrix_HelT) <- c("HelT1", "HelT2", "HelT3", "HelT4")
-
-#################################for ProT
-data_matrix_ProT <- matrix(unlist(normalized_result_list_ProT), ncol = 3, byrow = TRUE)
-
-result <- character()
-seen_elements <- character()
-
-for (index in seq_along(names(normalized_result_list_ProT))) {
-  element <- names(normalized_result_list_ProT)[index]
-  sub_elements <- normalized_result_list_ProT[[element]]
-
-  repeat_count <- length(sub_elements)
-
-  alphabet <- letters
-  
-  for (sub_index in seq_along(sub_elements)) {
-    repeated_element <- paste0(element, "_", alphabet[sub_index])
-
-    if (!(repeated_element %in% seen_elements)) {
-      result <- c(result, repeated_element)
-      seen_elements <- c(seen_elements, repeated_element)
-    }
-  }
-}
-
-rownames(data_matrix_ProT) <- result
-colnames(data_matrix_ProT) <- c("ProT1", "ProT2", "ProT3")
-
-######################################Roll
-
-data_matrix_Roll <- matrix(unlist(normalized_result_list_Roll), ncol = 4, byrow = TRUE)
-
-result <- character()
-seen_elements <- character()
-
-for (index in seq_along(names(normalized_result_list_Roll))) {
-  element <- names(normalized_result_list_Roll)[index]
-
-
-  repeat_count <- length(sub_elements)
-
-  alphabet <- letters
-  
-  for (sub_index in seq_along(sub_elements)) {
-    repeated_element <- paste0(element, "_", alphabet[sub_index])
-
-    if (!(repeated_element %in% seen_elements)) {
-      result <- c(result, repeated_element)
-      seen_elements <- c(seen_elements, repeated_element)
-    }
-  }
-}
-
-rownames(data_matrix_Roll) <- result
-colnames(data_matrix_Roll) <- c("Roll1", "Roll2", "Roll3", "Roll4")
-
-
-################################integration
-
+İNTEGRATİON
+```{r}
 integrate_data <- merge(data_matrix_mgw, data_matrix_ep,by = "row.names", all = TRUE)
 integrate_data2 <- cbind(integrate_data,data_matrix_ProT)
 integrate_data3 <- cbind(integrate_data2,data_matrix_HelT)
@@ -612,8 +142,6 @@ integrate_data4 <- cbind(integrate_data3,data_matrix_Roll)
 
 rownames(integrate_data2) <- integrate_data2$Row.names
 integrate_data2$Row.names <- NULL
-
-
 
 
 res.dist <-dist(integrate_data2, method = "euclidean")
